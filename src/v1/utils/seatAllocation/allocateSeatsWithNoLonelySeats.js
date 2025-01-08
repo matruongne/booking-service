@@ -1,30 +1,39 @@
-function allocateSeatsWithNoLonelySeats(availableSeats, requestedSeats, selectedSeats = null) {
-	// Kiểm tra ghế lẻ xung quanh (dành cho trường hợp khách chọn ghế cụ thể)
-	function createsLonelySeats(selectedSeats, allSeats) {
-		// Sắp xếp ghế theo hàng và cột để xử lý dễ hơn
+const allocateSeatsWithNoLonelySeats = (availableSeats, requestedSeats, selectedSeats = null) => {
+	// Sắp xếp danh sách ghế
+	availableSeats.sort((a, b) => {
+		const rowA = a.seat_code[0]
+		const rowB = b.seat_code[0]
+		const colA = parseInt(a.seat_code.slice(1))
+		const colB = parseInt(b.seat_code.slice(1))
+		return rowA === rowB ? colA - colB : rowA.localeCompare(rowB)
+	})
+
+	// Kiểm tra ghế lẻ xung quanh
+	const createsLonelySeats = (selectedSeats, allSeats) => {
+		const seatCodes = allSeats.map(seat => seat.seat_code)
 		selectedSeats.sort((a, b) => {
-			const rowA = a[0]
-			const rowB = b[0]
-			const colA = parseInt(a.slice(1))
-			const colB = parseInt(b.slice(1))
+			const rowA = a.seat_code[0]
+			const rowB = b.seat_code[0]
+			const colA = parseInt(a.seat_code.slice(1))
+			const colB = parseInt(b.seat_code.slice(1))
 			return rowA === rowB ? colA - colB : rowA.localeCompare(rowB)
 		})
 
 		for (let seat of selectedSeats) {
-			const row = seat[0]
-			const col = parseInt(seat.slice(1))
+			const row = seat.seat_code[0]
+			const col = parseInt(seat.seat_code.slice(1))
 
 			const leftSeat = `${row}${col - 1}`
 			const rightSeat = `${row}${col + 1}`
 
 			const isLeftLonely =
-				allSeats.includes(leftSeat) &&
-				!selectedSeats.includes(leftSeat) &&
-				!allSeats.includes(`${row}${col - 2}`)
+				seatCodes.includes(leftSeat) &&
+				!selectedSeats.some(s => s.seat_code === leftSeat) &&
+				!seatCodes.includes(`${row}${col - 2}`)
 			const isRightLonely =
-				allSeats.includes(rightSeat) &&
-				!selectedSeats.includes(rightSeat) &&
-				!allSeats.includes(`${row}${col + 2}`)
+				seatCodes.includes(rightSeat) &&
+				!selectedSeats.some(s => s.seat_code === rightSeat) &&
+				!seatCodes.includes(`${row}${col + 2}`)
 
 			if (isLeftLonely || isRightLonely) {
 				return true
@@ -44,15 +53,15 @@ function allocateSeatsWithNoLonelySeats(availableSeats, requestedSeats, selected
 		return { success: true, seats: selectedSeats }
 	}
 
-	// Tự động phân bổ ghế (không chọn trung tâm, ưu tiên ghế liên tiếp)
+	// Tự động phân bổ ghế (ưu tiên ghế liên tiếp)
 	let allocatedSeats = []
 	let tempCluster = []
-	let currentRow = availableSeats[0][0]
+	let currentRow = availableSeats[0].seat_code[0]
 
 	for (let i = 0; i < availableSeats.length; i++) {
 		const currentSeat = availableSeats[i]
-		const row = currentSeat[0]
-		const col = parseInt(currentSeat.slice(1))
+		const row = currentSeat.seat_code[0]
+		const col = parseInt(currentSeat.seat_code.slice(1))
 
 		// Nếu chuyển sang hàng mới hoặc reset cụm ghế
 		if (row !== currentRow) {
@@ -72,7 +81,7 @@ function allocateSeatsWithNoLonelySeats(availableSeats, requestedSeats, selected
 		// Nếu cụm ghế không liên tiếp, reset lại cụm ghế
 		if (tempCluster.length > 1) {
 			const lastSeat = tempCluster[tempCluster.length - 2]
-			const lastCol = parseInt(lastSeat.slice(1))
+			const lastCol = parseInt(lastSeat.seat_code.slice(1))
 
 			if (col !== lastCol + 1) {
 				tempCluster = [currentSeat]
@@ -80,7 +89,7 @@ function allocateSeatsWithNoLonelySeats(availableSeats, requestedSeats, selected
 		}
 	}
 
-	// Nếu không đủ ghế trong một hàng, bổ sung ghế từ hàng tiếp theo
+	// Nếu không đủ ghế trong một hàng, bổ sung từ các hàng tiếp theo
 	if (allocatedSeats.length < requestedSeats) {
 		let remainingSeats = requestedSeats - allocatedSeats.length
 
@@ -98,3 +107,5 @@ function allocateSeatsWithNoLonelySeats(availableSeats, requestedSeats, selected
 		? { success: true, seats: allocatedSeats }
 		: { success: false, message: 'Không tìm thấy cụm ghế phù hợp.' }
 }
+
+module.exports = allocateSeatsWithNoLonelySeats
